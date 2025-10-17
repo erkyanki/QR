@@ -1,1 +1,478 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Akıllı Yoklama Sistemi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: 'Outfit', sans-serif; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            position: relative;
+            overflow-x: hidden;
+        }
+        
+        /* Animated Background Blobs */
+        .blob {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.4;
+            animation: float 20s infinite ease-in-out;
+        }
+        .blob-1 { background: #ff6b6b; width: 400px; height: 400px; top: -100px; left: -100px; animation-delay: 0s; }
+        .blob-2 { background: #4ecdc4; width: 350px; height: 350px; bottom: -100px; right: -100px; animation-delay: -5s; }
+        .blob-3 { background: #ffe66d; width: 300px; height: 300px; top: 50%; left: 50%; transform: translate(-50%, -50%); animation-delay: -10s; }
+        
+        @keyframes float {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            33% { transform: translate(50px, -80px) scale(1.1); }
+            66% { transform: translate(-50px, 80px) scale(0.9); }
+        }
+        
+        /* Glass Card Effect */
+        .glass-card {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        
+        .glass-dark {
+            background: rgba(30, 30, 50, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+        
+        /* Fade In Animation */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .fade-in { animation: fadeInUp 0.6s ease-out forwards; }
+        .delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .delay-3 { animation-delay: 0.3s; opacity: 0; }
+        
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        /* Hover Effects */
+        .hover-lift { transition: all 0.3s ease; }
+        .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.3); }
+        
+        /* Button Styles */
+        .btn-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            transition: all 0.3s ease;
+        }
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px -5px rgba(102, 126, 234, 0.5);
+        }
+        
+        /* Pulse Animation for Active Status */
+        @keyframes pulse-ring {
+            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        }
+        .pulse-active { animation: pulse-ring 2s infinite; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); }
+        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; }
+        
+        /* QR Code Container */
+        #qrcode { display: inline-block; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.2); }
+        #qrcode canvas, #qrcode img { display: block !important; }
+    </style>
+</head>
+<body>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+    
+    <div id="app" style="position: relative; z-index: 1;"></div>
 
+    <script>
+        const state = {
+            students: [
+                { id: 1, name: 'İBRAHİM GÜLTEKİN', number: '18070003013' },
+                { id: 2, name: 'ELİF EMİNE GÜNAL', number: '19070001053' },
+                { id: 3, name: 'ERK YANKI URAL', number: '19070008012' },
+                { id: 4, name: 'ERCE ÖZKAN', number: '20070001057' },
+                { id: 5, name: 'İPEK ATIŞ', number: '20070002048' },
+                { id: 6, name: 'İDİL ECE CEVAHİR', number: '20070007004' },
+                { id: 7, name: 'SUDE ONFİDAN', number: '20070008016' },
+                { id: 8, name: 'ÖMER ARICA', number: '20070008017' },
+                { id: 9, name: 'SELİM MERT KIRCAALİLİ', number: '20070008019' },
+                { id: 10, name: 'BERİL DERAN GÜRBÜZ', number: '20070008029' },
+                { id: 11, name: 'ALİ HAKTAN SIĞIN', number: '21070001004' },
+                { id: 12, name: 'ARDA ALTUNHAN', number: '21070001051' },
+                { id: 13, name: 'EKREM TEMEL', number: '21070001070' },
+                { id: 14, name: 'NESRİN ŞENTÜRK', number: '21070002005' },
+                { id: 15, name: 'BATUHAN ŞİŞMAN', number: '21070002025' },
+                { id: 16, name: 'KIVANÇ EFE ERGÖNÜL', number: '21070005027' },
+                { id: 17, name: 'OĞUZ KOYUCAN', number: '21070005030' },
+                { id: 18, name: 'ZEYNEP ARSLANBUĞA', number: '21070005042' },
+                { id: 19, name: 'BESTE TEKİN', number: '21070007001' },
+                { id: 20, name: 'EKİN ALTUNKAYA', number: '21070007004' },
+                { id: 21, name: 'EMRE ERİŞİR', number: '21070008003' },
+                { id: 22, name: 'İSMAİL CANBERK DEMİRKAN', number: '21070008014' },
+                { id: 23, name: 'CAN GİRGİN', number: '21070008016' },
+                { id: 24, name: 'KEREM EROĞLU', number: '21070008017' },
+                { id: 25, name: 'ARMAĞAN SOYLU', number: '21070008027' },
+                { id: 26, name: 'ALP SERKAN MERKİT', number: '21070008033' },
+                { id: 27, name: 'ATAKAN DİNÇER', number: '21070008034' },
+                { id: 28, name: 'DEMET BÜYÜKTAŞ', number: '21070008306' },
+                { id: 29, name: 'GÜRKAN EROĞLU', number: '22070001041' },
+                { id: 30, name: 'EMRE EFE YÜKSEL', number: '22070001055' },
+                { id: 31, name: 'SÜLEYMAN BATU SARI', number: '22070002015' },
+                { id: 32, name: 'KADİR EMRE GÜNEŞ', number: '22070002047' },
+                { id: 33, name: 'TOPRAK TUNCER', number: '22070005040' },
+                { id: 34, name: 'EMRE CAN HEKİMOĞLU', number: '22070005053' },
+                { id: 35, name: 'ILGAR ŞENOL', number: '22070007014' },
+                { id: 36, name: 'EDA NUR ÇALIŞKAN', number: '22070008017' },
+                { id: 37, name: 'SAMİ BERK ŞAHİN', number: '22070008021' },
+                { id: 38, name: 'DENİZ ÜNVER', number: '22070008026' },
+                { id: 39, name: 'AYKAN KANLI', number: '22070008034' },
+                { id: 40, name: 'DENİZ KARATEPE', number: '22070008043' },
+                { id: 41, name: 'AYŞEGÜL KARINYARICI', number: '22070003022' },
+                { id: 42, name: 'AHMET ÖZGÜR KORKMAZ', number: '21070001046' }
+            ],
+            currentWeek: 1,
+            attendance: {},
+            session: null,
+            checkinNumber: '',
+            checkinCode: ''
+        };
+
+        const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
+
+        const getStats = () => {
+            const weeks = Object.keys(state.attendance).map(Number);
+            const maxWeek = weeks.length ? Math.max(...weeks) : 0;
+            
+            const studentStats = state.students.map(s => {
+                let present = 0;
+                weeks.forEach(w => {
+                    if (state.attendance[w]?.includes(s.number)) present++;
+                });
+                const absences = Math.max(0, maxWeek - present);
+                let status = 'safe';
+                if (absences >= 5) status = 'failed';
+                else if (absences === 4) status = 'danger';
+                else if (absences >= 2) status = 'warning';
+                
+                return { ...s, present, absences, status };
+            });
+
+            return {
+                students: studentStats,
+                total: state.students.length,
+                maxWeek,
+                safe: studentStats.filter(s => s.status === 'safe').length,
+                warning: studentStats.filter(s => s.status === 'warning').length,
+                danger: studentStats.filter(s => s.status === 'danger').length,
+                failed: studentStats.filter(s => s.status === 'failed').length
+            };
+        };
+
+        const startSession = () => {
+            const code = generateCode();
+            state.session = { week: state.currentWeek, code, active: true };
+            render();
+        };
+
+        const endSession = () => {
+            state.session = null;
+            render();
+        };
+
+        const recordAttendance = () => {
+            const num = state.checkinNumber.trim();
+            const code = state.checkinCode.trim();
+            
+            if (!num || !code) {
+                alert('⚠️ Lütfen öğrenci numarası ve kodu girin!');
+                return;
+            }
+
+            if (!state.session?.active) {
+                alert('⚠️ Aktif yoklama oturumu yok!');
+                return;
+            }
+
+            if (code !== state.session.code) {
+                alert('❌ Kod yanlış!');
+                return;
+            }
+
+            const student = state.students.find(s => s.number === num);
+            if (!student) {
+                alert('❌ Öğrenci bulunamadı!');
+                return;
+            }
+
+            if (!state.attendance[state.currentWeek]) {
+                state.attendance[state.currentWeek] = [];
+            }
+
+            if (state.attendance[state.currentWeek].includes(num)) {
+                alert('⚠️ Bu öğrenci zaten yoklamaya katıldı!');
+                return;
+            }
+
+            state.attendance[state.currentWeek].push(num);
+            alert(`✅ ${student.name} yoklamaya kaydedildi!`);
+            state.checkinNumber = '';
+            state.checkinCode = '';
+            window.location.hash = '#/dashboard';
+        };
+
+        const changeWeek = (delta) => {
+            state.currentWeek = Math.max(1, state.currentWeek + delta);
+            render();
+        };
+
+        const copyUrl = () => {
+            const url = `${window.location.origin}${window.location.pathname}#/checkin?w=${state.currentWeek}&c=${state.session.code}`;
+            navigator.clipboard.writeText(url).then(() => alert('✅ Link kopyalandı!'));
+        };
+
+        const renderDashboard = () => {
+            const stats = getStats();
+            const url = state.session ? `${window.location.origin}${window.location.pathname}#/checkin?w=${state.currentWeek}&c=${state.session.code}` : '';
+            
+            return `
+                <div class="max-w-7xl mx-auto p-6 space-y-8">
+                    <!-- Header -->
+                    <div class="glass-card rounded-3xl p-8 fade-in hover-lift">
+                        <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                            <div class="text-center md:text-left">
+                                <h1 class="text-5xl md:text-6xl font-black gradient-text mb-2">
+                                    Akıllı Yoklama
+                                </h1>
+                                <p class="text-gray-600 text-lg font-medium">Hafta ${state.currentWeek} • ${stats.total} Öğrenci</p>
+                            </div>
+                            <div class="flex gap-3">
+                                <button onclick="changeWeek(-1)" class="w-14 h-14 btn-gradient rounded-2xl flex items-center justify-center text-white shadow-lg">
+                                    <i data-lucide="chevron-left" class="w-6 h-6"></i>
+                                </button>
+                                <button onclick="changeWeek(1)" class="w-14 h-14 btn-gradient rounded-2xl flex items-center justify-center text-white shadow-lg">
+                                    <i data-lucide="chevron-right" class="w-6 h-6"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats Grid -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div class="glass-card rounded-3xl p-6 fade-in delay-1 hover-lift">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center">
+                                    <i data-lucide="check-circle" class="w-7 h-7 text-white"></i>
+                                </div>
+                                <span class="text-4xl font-black text-green-600">${stats.safe}</span>
+                            </div>
+                            <h3 class="text-gray-700 font-bold text-lg">Güvenli</h3>
+                            <p class="text-gray-500 text-sm">Devamsızlık sorunu yok</p>
+                        </div>
+
+                        <div class="glass-card rounded-3xl p-6 fade-in delay-2 hover-lift">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-14 h-14 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center">
+                                    <i data-lucide="alert-triangle" class="w-7 h-7 text-white"></i>
+                                </div>
+                                <span class="text-4xl font-black text-orange-600">${stats.warning}</span>
+                            </div>
+                            <h3 class="text-gray-700 font-bold text-lg">Dikkat</h3>
+                            <p class="text-gray-500 text-sm">2-3 devamsızlık</p>
+                        </div>
+
+                        <div class="glass-card rounded-3xl p-6 fade-in delay-3 hover-lift">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center">
+                                    <i data-lucide="alert-octagon" class="w-7 h-7 text-white"></i>
+                                </div>
+                                <span class="text-4xl font-black text-red-600">${stats.danger}</span>
+                            </div>
+                            <h3 class="text-gray-700 font-bold text-lg">Tehlikede</h3>
+                            <p class="text-gray-500 text-sm">4 devamsızlık</p>
+                        </div>
+
+                        <div class="glass-card rounded-3xl p-6 fade-in delay-3 hover-lift">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="w-14 h-14 bg-gradient-to-br from-red-600 to-pink-600 rounded-2xl flex items-center justify-center">
+                                    <i data-lucide="x-circle" class="w-7 h-7 text-white"></i>
+                                </div>
+                                <span class="text-4xl font-black text-red-700">${stats.failed}</span>
+                            </div>
+                            <h3 class="text-gray-700 font-bold text-lg">Kaldı</h3>
+                            <p class="text-gray-500 text-sm">5+ devamsızlık</p>
+                        </div>
+                    </div>
+
+                    <!-- Session Control -->
+                    <div class="glass-card rounded-3xl p-8 fade-in hover-lift">
+                        <div class="flex items-center gap-3 mb-6">
+                            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center">
+                                <i data-lucide="radio" class="w-6 h-6 text-white"></i>
+                            </div>
+                            <h2 class="text-3xl font-black text-gray-800">Yoklama Oturumu</h2>
+                        </div>
+                        
+                        ${state.session?.active ? `
+                            <div class="space-y-6">
+                                <div class="flex items-center gap-4 bg-green-50 border-2 border-green-200 rounded-2xl p-6">
+                                    <div class="w-4 h-4 bg-green-500 rounded-full pulse-active"></div>
+                                    <div>
+                                        <p class="text-green-700 font-bold text-lg">Oturum Aktif</p>
+                                        <p class="text-green-600">Kod: <span class="text-3xl font-black">${state.session.code}</span></p>
+                                    </div>
+                                </div>
+                                
+                                <div class="flex flex-col items-center gap-6">
+                                    <div id="qrcode"></div>
+                                    <p class="text-gray-600 text-center max-w-md">Öğrenciler bu QR kodu tarayarak veya linki kullanarak yoklamaya katılabilir</p>
+                                </div>
+                                
+                                <div class="flex flex-wrap gap-4">
+                                    <button onclick="copyUrl()" class="flex-1 min-w-[200px] px-6 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg transition transform hover:scale-105">
+                                        <i data-lucide="copy" class="w-5 h-5"></i>
+                                        Linki Kopyala
+                                    </button>
+                                    <button onclick="endSession()" class="flex-1 min-w-[200px] px-6 py-4 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg transition transform hover:scale-105">
+                                        <i data-lucide="stop-circle" class="w-5 h-5"></i>
+                                        Oturumu Bitir
+                                    </button>
+                                </div>
+                            </div>
+                        ` : `
+                            <button onclick="startSession()" class="w-full px-8 py-6 btn-gradient rounded-2xl text-white font-bold text-xl flex items-center justify-center gap-3 shadow-xl">
+                                <i data-lucide="play-circle" class="w-7 h-7"></i>
+                                Yeni Oturum Başlat
+                            </button>
+                        `}
+                    </div>
+
+                    <!-- Students Table -->
+                    <div class="glass-card rounded-3xl overflow-hidden fade-in hover-lift">
+                        <div class="p-8 border-b border-gray-200">
+                            <div class="flex items-center gap-3">
+                                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
+                                    <i data-lucide="users" class="w-6 h-6 text-white"></i>
+                                </div>
+                                <h2 class="text-3xl font-black text-gray-800">Öğrenci Listesi</h2>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full">
+                                <thead class="bg-gradient-to-r from-purple-50 to-indigo-50">
+                                    <tr>
+                                        <th class="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase">Öğrenci</th>
+                                        <th class="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase">Numara</th>
+                                        <th class="px-6 py-4 text-center text-sm font-bold text-gray-700 uppercase">Katılım</th>
+                                        <th class="px-6 py-4 text-center text-sm font-bold text-gray-700 uppercase">Devamsızlık</th>
+                                        <th class="px-6 py-4 text-center text-sm font-bold text-gray-700 uppercase">Durum</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-gray-100">
+                                    ${stats.students.map((s, i) => {
+                                        const statusConfig = {
+                                            safe: { color: 'from-green-400 to-emerald-500', text: 'Güvenli', bg: 'bg-green-50', textColor: 'text-green-700' },
+                                            warning: { color: 'from-yellow-400 to-orange-500', text: 'Dikkat', bg: 'bg-orange-50', textColor: 'text-orange-700' },
+                                            danger: { color: 'from-orange-500 to-red-500', text: 'Tehlike', bg: 'bg-red-50', textColor: 'text-red-700' },
+                                            failed: { color: 'from-red-600 to-pink-600', text: 'Kaldı', bg: 'bg-red-100', textColor: 'text-red-800' }
+                                        };
+                                        const config = statusConfig[s.status];
+                                        const initials = s.name.split(' ').map(n => n[0]).join('');
+                                        
+                                        return `
+                                            <tr class="hover:bg-purple-50 transition">
+                                                <td class="px-6 py-4">
+                                                    <div class="flex items-center gap-4">
+                                                        <div class="w-12 h-12 bg-gradient-to-br ${config.color} rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                                                            ${initials}
+                                                        </div>
+                                                        <div class="font-semibold text-gray-800">${s.name}</div>
+                                                    </div>
+                                                </td>
+                                                <td class="px-6 py-4 text-gray-600 font-medium">${s.number}</td>
+                                                <td class="px-6 py-4 text-center">
+                                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold text-blue-700 bg-blue-100">
+                                                        ${s.present}/${stats.maxWeek}
+                                                    </span>
+                                                </td>
+                                                <td class="px-6 py-4 text-center">
+                                                    <span class="text-lg font-bold text-gray-700">${s.absences}</span>
+                                                </td>
+                                                <td class="px-6 py-4 text-center">
+                                                    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${config.bg} ${config.textColor}">
+                                                        ${config.text}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        `;
+                                    }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderCheckin = () => {
+            const params = new URLSearchParams(window.location.hash.split('?')[1]);
+            const week = params.get('w') || state.currentWeek;
+            
+            return `
+                <div class="min-h-screen flex items-center justify-center p-6">
+                    <div class="w-full max-w-md glass-card rounded-3xl p-10 fade-in shadow-2xl">
+                        <div class="text-center mb-8">
+                            <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-xl transform hover:scale-105 transition">
+                                <i data-lucide="user-check" class="w-12 h-12 text-white"></i>
+                            </div>
+                            <h1 class="text-4xl font-black gradient-text mb-2">
+                                Yoklama Girişi
+                            </h1>
+                            <p class="text-gray-600 text-lg font-medium">Hafta ${week}</p>
+                        </div>
+
+                        <div class="space-y-5">
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Öğrenci Numarası</label>
+                                <input 
+                                    type="text" 
+                                    id="studentNumber"
+                                    value="${state.checkinNumber}"
+                                    placeholder="Örn: 21070008016"
+                                    class="w-full px-5 py-4 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-purple-500 text-gray-800 font-medium transition"
+                                    oninput="state.checkinNumber = this.value"
+                                />
+                            </div>
+
+                            <div>
+                                <label class="block text-sm font-bold text-gray-700 mb-2">Yoklama Kodu</label>
+                                <input 
+                                    type="text" 
+                                    id="attendanceCode"
+                                    value="${state.checkinCode}"
+                                    placeholder="6 haneli kod"
+                                    class="w-full px-5 py-4 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-purple-500 text-gray-800 font-bold text-xl uppercase tracking-wider transition"
+                                    oninput="state.checkinCode = this
