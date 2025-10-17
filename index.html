@@ -1,0 +1,479 @@
+import React, { useEffect, useMemo, useState } from 'react';
+import { AlertCircle, Users, Calendar, QrCode, Download, Plus, CheckCircle, X, ArrowLeft } from 'lucide-react';
+import { QRCodeCanvas } from 'qrcode.react';
+
+/**
+ * 🚀 İSTENEN: Bu bilgisayarda QR üret, öğrenciler telefondan başka cihazdan kendi numarasıyla yoklama işaretlesin.
+ *
+ * Bu gereksinim için 2 MOD ekledim:
+ * - LOCAL (varsayılan): Veriler tarayıcıda (localStorage) tutulur. Sadece aynı cihazda kalır.
+ * - APPS_SCRIPT: Google Apps Script (Sheets) üzerindeki bir basit REST endpoint’e yazar/okur → cihazlar arası eşitlenir.
+ * (Kısa kurulum adımlarını aşağıda ‘Kılavuz’ sekmesinde anlattım.)
+ */
+const BACKEND = {
+  mode: 'LOCAL', // 'LOCAL' | 'APPS_SCRIPT'
+  APPS_SCRIPT_URL: '' // Apps Script Web App URL’sini buraya yapıştırınca cihazlar arası çalışır
+};
+
+// ---- Yardımcı: localStorage sarmalayıcı
+const ls = {
+  get(key, fallback) {
+    try { const v = localStorage.getItem(key); return v ? JSON.parse(v) : fallback; } catch { return fallback; }
+  },
+  set(key, val) { try { localStorage.setItem(key, JSON.stringify(val)); } catch {} },
+};
+
+// ---- Backend soyutlama (LOCAL / APPS_SCRIPT)
+const api = {
+  async saveSession(week, session) {
+    if (BACKEND.mode === 'LOCAL') {
+      const sessions = ls.get('ys_sessions', {});
+      sessions[week] = session; ls.set('ys_sessions', sessions); return session;
+    }
+    // Apps Script
+    const res = await fetch(BACKEND.APPS_SCRIPT_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'saveSession', week, session })
+    });
+    if (!res.ok) throw new Error('Sunucuya yazılamadı');
+    return await res.json();
+  },
+  async getSession(week) {
+    if (BACKEND.mode === 'LOCAL') {
+      const sessions = ls.get('ys_sessions', {});
+      return sessions[week] || null;
+    }
+    const url = new URL(BACKEND.APPS_SCRIPT_URL);
+    url.searchParams.set('action', 'getSession'); url.searchParams.set('week', String(week));
+    const res = await fetch(url.toString());
+    if (!res.ok) throw new Error('Sunucudan oturum okunamadı');
+    const data = await res.json();
+    return data;
+  },
+  async recordCheckin(week, number, code) {
+    if (BACKEND.mode === 'LOCAL') {
+      const sessions = ls.get('ys_sessions', {});
+      const sess = sessions[week];
+      if (!sess?.active) throw new Error('Oturum aktif değil.');
+      if (String(sess.code).trim() !== String(code).trim()) throw new Error('Kod doğrulanamadı.');
+      const attendance = ls.get('ys_attendance', {});
+      const cur = new Set(attendance[week] || []);
+      if (cur.has(number)) throw new Error('Bu numara zaten yoklamaya katıldı.');
+      cur.add(number);
+      attendance[week] = Array.from(cur);
+      ls.set('ys_attendance', attendance);
+      return { ok: true };
+    }
+    const res = await fetch(BACKEND.APPS_SCRIPT_URL, {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'recordCheckin', week, number, code })
+    });
+    if (!res.ok) throw new Error('Sunucuya yazılamadı');
+    const data = await res.json();
+    if (!data?.ok) throw new Error(data?.error || 'Kayıt hatası');
+    return data;
+  },
+  async getAttendance() {
+    if (BACKEND.mode === 'LOCAL') return ls.get('ys_attendance', {});
+    const url = new URL(BACKEND.APPS_SCRIPT_URL); url.searchParams.set('action', 'getAttendance');
+    const res = await fetch(url.toString()); if (!res.ok) throw new Error('Attendance okunamadı');
+    return await res.json();
+  }
+};
+
+// ---- Router (/#/checkin?week=1&code=XXXX)
+function useRoute() {
+  const [route, setRoute] = useState(() => window.location.hash || '#/dashboard');
+  useEffect(() => { const fn = () => setRoute(window.location.hash || '#/dashboard'); window.addEventListener('hashchange', fn); return () => window.removeEventListener('hashchange', fn); }, []);
+  const hash = route.split('?')[0];
+  const qs = new URLSearchParams(route.split('?')[1] || '');
+  return { hash, qs };
+}
+
+export default function App() {
+  const { hash, qs } = useRoute();
+
+  // DÜZENLENMİŞ ÖĞRENCİ LİSTESİ
+  const defaultStudents = [
+    { id: 1, name: 'İBRAHİM GÜLTEKİN', number: '18070003013' },
+    { id: 2, name: 'ELİF EMİNE GÜNAL', number: '19070001053' },
+    { id: 3, name: 'ERK YANKI URAL', number: '19070008012' },
+    { id: 4, name: 'ERCE ÖZKAN', number: '20070001057' },
+    { id: 5, name: 'İPEK ATIŞ', number: '20070002048' },
+    { id: 6, name: 'İDİL ECE CEVAHİR', number: '20070007004' },
+    { id: 7, name: 'SUDE ONFİDAN', number: '20070008016' },
+    { id: 8, name: 'ÖMER ARICA', number: '20070008017' },
+    { id: 9, name: 'SELİM MERT KIRCAALİLİ', number: '20070008019' },
+    { id: 10, name: 'BERİL DERAN GÜRBÜZ', number: '20070008029' },
+    { id: 11, name: 'ALİ HAKTAN SIĞIN', number: '21070001004' },
+    { id: 12, name: 'ARDA ALTUNHAN', number: '21070001051' },
+    { id: 13, name: 'EKREM TEMEL', number: '21070001070' },
+    { id: 14, name: 'NESRİN ŞENTÜRK', number: '21070002005' },
+    { id: 15, name: 'BATUHAN ŞİŞMAN', number: '21070002025' },
+    { id: 16, name: 'KIVANÇ EFE ERGÖNÜL', number: '21070005027' },
+    { id: 17, name: 'OĞUZ KOYUCAN', number: '21070005030' },
+    { id: 18, name: 'ZEYNEP ARSLANBUĞA', number: '21070005042' },
+    { id: 19, name: 'BESTE TEKİN', number: '21070007001' },
+    { id: 20, name: 'EKİN ALTUNKAYA', number: '21070007004' },
+    { id: 21, name: 'EMRE ERİŞİR', number: '21070008003' },
+    { id: 22, name: 'İSMAİL CANBERK DEMİRKAN', number: '21070008014' },
+    { id: 23, name: 'CAN GİRGİN', number: '21070008016' },
+    { id: 24, name: 'KEREM EROĞLU', number: '21070008017' },
+    { id: 25, name: 'ARMAĞAN SOYLU', number: '21070008027' },
+    { id: 26, name: 'ALP SERKAN MERKİT', number: '21070008033' },
+    { id: 27, name: 'ATAKAN DİNÇER', number: '21070008034' },
+    { id: 28, name: 'DEMET BÜYÜKTAŞ', number: '21070008306' },
+    { id: 29, name: 'GÜRKAN EROĞLU', number: '22070001041' },
+    { id: 30, name: 'EMRE EFE YÜKSEL', number: '22070001055' },
+    { id: 31, name: 'SÜLEYMAN BATU SARI', number: '22070002015' },
+    { id: 32, name: 'KADİR EMRE GÜNEŞ', number: '22070002047' },
+    { id: 33, name: 'TOPRAK TUNCER', number: '22070005040' },
+    { id: 34, name: 'EMRE CAN HEKİMOĞLU', number: '22070005053' },
+    { id: 35, name: 'ILGAR ŞENOL', number: '22070007014' },
+    { id: 36, name: 'EDA NUR ÇALIŞKAN', number: '22070008017' },
+    { id: 37, name: 'SAMİ BERK ŞAHİN', number: '22070008021' },
+    { id: 38, name: 'DENİZ ÜNVER', number: '22070008026' },
+    { id: 39, name: 'AYKAN KANLI', number: '22070008034' },
+    { id: 40, name: 'DENİZ KARATEPE', number: '22070008043' },
+    { id: 41, name: 'AYŞEGÜL KARINYARICI', number: '22070003022' },
+    { id: 42, name: 'AHMET ÖZGÜR KORKMAZ', number: '21070001046' },
+  ];
+
+  const [students, setStudents] = useState(() => ls.get('ys_students', defaultStudents));
+  const [currentWeek, setCurrentWeek] = useState(() => ls.get('ys_week', 1));
+  const [activeTab, setActiveTab] = useState('dashboard');
+  const [newStudent, setNewStudent] = useState({ name: '', number: '' });
+  const [attendance, setAttendance] = useState(() => ls.get('ys_attendance', {})); // { [week]: [numbers] }
+  const [session, setSession] = useState(null); // Mevcut haftanın oturum bilgisi
+  const [qrCode, setQrCode] = useState(''); // Sadece anlık üretilen kod için
+  const [uiError, setUiError] = useState('');
+
+  useEffect(() => ls.set('ys_students', students), [students]);
+  useEffect(() => ls.set('ys_week', currentWeek), [currentWeek]);
+  useEffect(() => ls.set('ys_attendance', attendance), [attendance]);
+
+  // QR İYİLEŞTİRMESİ: Hafta değiştiğinde, o haftaya ait oturum verisini çek ve durumu yansıt
+  useEffect(() => {
+    const fetchSessionForWeek = async () => {
+      try {
+        setUiError('');
+        const existingSession = await api.getSession(currentWeek);
+        setSession(existingSession);
+        // Eğer o haftaya ait aktif bir oturum varsa, QR kodunu göster
+        if (existingSession?.active) {
+          setQrCode(existingSession.code);
+        } else {
+          setQrCode(''); // Aktif oturum yoksa temizle
+        }
+      } catch (e) {
+        setUiError(`Hafta ${currentWeek} oturum verisi alınamadı: ${e.message}`);
+        setSession(null);
+        setQrCode('');
+      }
+    };
+
+    fetchSessionForWeek();
+  }, [currentWeek]);
+
+
+  // Devam/devamsızlık hesabı
+  const computedStudents = useMemo(() => {
+    const weeks = Object.keys(attendance).map(Number);
+    const maxWeek = weeks.length ? Math.max(...weeks) : 0;
+    const presentMap = new Map();
+    weeks.forEach(w => {
+      (attendance[w] || []).forEach(n => {
+        presentMap.set(n, (presentMap.get(n) || 0) + 1);
+      })
+    });
+    return students.map(s => {
+      const present = presentMap.get(s.number) || 0;
+      const absences = Math.max(0, maxWeek - present);
+      return { ...s, present, absences, totalWeeks: maxWeek };
+    });
+  }, [students, attendance]);
+
+  const getStatusColor = (absences) => {
+    if (absences >= 5) return 'bg-red-100 text-red-800 border-red-300';
+    if (absences === 4) return 'bg-orange-100 text-orange-800 border-orange-300';
+    if (absences >= 2) return 'bg-yellow-100 text-yellow-800 border-yellow-300';
+    return 'bg-green-100 text-green-800 border-green-300';
+  };
+  const getStatusText = (absences) => {
+    if (absences >= 5) return 'KALDI';
+    if (absences === 4) return 'TEHLİKEDE';
+    if (absences >= 2) return 'DİKKAT';
+    return 'GÜVENLİ';
+  };
+
+  const generateQR = async () => {
+    try {
+      setUiError('');
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      setQrCode(code);
+      const sess = { code, active: true, week: currentWeek, createdAt: Date.now() };
+      await api.saveSession(currentWeek, sess);
+      setSession(sess);
+    } catch (e) {
+      setUiError(e.message || String(e));
+    }
+  };
+
+  const deactivateSession = async () => {
+    try {
+      const cur = await api.getSession(currentWeek);
+      if (!cur) return;
+      const closed = { ...cur, active: false };
+      await api.saveSession(currentWeek, closed);
+      setSession(closed);
+      setQrCode('');
+    } catch (e) {
+      setUiError(e.message || String(e));
+    }
+  };
+
+  const checkinURL = useMemo(() => {
+    const { origin, pathname } = window.location;
+    const base = origin + pathname.replace(/\/$/, '') + '#/checkin';
+    const code = qrCode || session?.code || '';
+    return `${base}?week=${currentWeek}&code=${encodeURIComponent(code)}`;
+  }, [currentWeek, qrCode, session]);
+
+  const downloadCSV = () => {
+    const presentSet = new Set(attendance[currentWeek] || []);
+    const rows = [
+      ['Hafta', 'Ad Soyad', 'Öğrenci No', 'Durum'],
+      ...students.map(s => [currentWeek, s.name, s.number, presentSet.has(s.number) ? 'Var' : 'Yok'])
+    ];
+    const csv = rows.map(r => r.map(x => /,|"/.test(String(x)) ? `"${String(x).replace(/"/g, '""')}"` : x).join(',')).join('\n');
+    const blob = new Blob([`\uFEFF${csv}`], { type: 'text/csv;charset=utf-8;' }); // Add BOM for Excel
+    const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `hafta_${currentWeek}_yoklama.csv`; a.click(); URL.revokeObjectURL(url);
+  };
+
+  if (hash === '#/checkin') {
+    return <CheckinPage qs={qs} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 p-4 sm:p-6">
+      <div className="max-w-7xl mx-auto">
+        <div className="bg-white rounded-2xl shadow-2xl p-6 sm:p-8 mb-6">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <h1 className="text-3xl sm:text-4xl font-bold text-gray-800 mb-2">📊 Akıllı Yoklama Sistemi</h1>
+              <p className="text-gray-600">14 Haftalık Dönem Yönetimi • QR Kod ile Otomatik Yoklama</p>
+            </div>
+            <div className="text-center">
+              <div className="text-5xl sm:text-6xl font-bold text-blue-600">{currentWeek}</div>
+              <div className="text-gray-600">/ 14 Hafta</div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sekmeler */}
+        <div className="bg-white rounded-2xl shadow-xl mb-6 p-2">
+          <div className="flex gap-2">
+            <button onClick={() => setActiveTab('dashboard')} className={`flex-1 py-3 px-4 rounded-xl font-semibold transition text-sm sm:text-base ${activeTab === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              <Users className="inline mr-2" size={20} /> Öğrenciler
+            </button>
+            <button onClick={() => setActiveTab('qr')} className={`flex-1 py-3 px-4 rounded-xl font-semibold transition text-sm sm:text-base ${activeTab === 'qr' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              <QrCode className="inline mr-2" size={20} /> QR Kod
+            </button>
+            <button onClick={() => setActiveTab('guide')} className={`flex-1 py-3 px-4 rounded-xl font-semibold transition text-sm sm:text-base ${activeTab === 'guide' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>
+              <Calendar className="inline mr-2" size={20} /> Kılavuz
+            </button>
+          </div>
+        </div>
+
+        {/* Öğrenci Listesi */}
+        {activeTab === 'dashboard' && (
+          <div className="space-y-6">
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">➕ Yeni Öğrenci Ekle</h2>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <input type="text" placeholder="Ad Soyad" value={newStudent.name} onChange={(e) => setNewStudent({ ...newStudent, name: e.target.value })} className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none" />
+                <input type="text" placeholder="Öğrenci No" value={newStudent.number} onChange={(e) => setNewStudent({ ...newStudent, number: e.target.value })} className="flex-1 px-4 py-3 border-2 border-gray-300 rounded-xl focus:border-blue-500 focus:outline-none" />
+                <button onClick={() => { if (!newStudent.name.trim() || !newStudent.number.trim()) return; const next = [...students, { id: students.length ? Math.max(...students.map(s => s.id)) + 1 : 1, name: newStudent.name.trim(), number: newStudent.number.trim() }]; setStudents(next); setNewStudent({ name: '', number: '' }); }} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-semibold hover:bg-blue-700 transition">
+                  <Plus className="inline mr-2" size={20} /> Ekle
+                </button>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold text-gray-800">👥 Öğrenci Listesi</h2>
+                <div className="text-gray-600">Toplam: <span className="font-bold text-blue-600">{students.length}</span> öğrenci</div>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-4 py-3 text-left text-xs sm:text-sm font-bold text-gray-700">Ad Soyad</th>
+                      <th className="px-4 py-3 text-left text-xs sm:text-sm font-bold text-gray-700">Öğrenci No</th>
+                      <th className="px-4 py-3 text-center text-xs sm:text-sm font-bold text-gray-700">Devam</th>
+                      <th className="px-4 py-3 text-center text-xs sm:text-sm font-bold text-gray-700">Durum</th>
+                      <th className="px-4 py-3 text-center text-xs sm:text-sm font-bold text-gray-700">Bu Hafta</th>
+                      <th className="px-4 py-3 text-center text-xs sm:text-sm font-bold text-gray-700">İşlem</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-200">
+                    {computedStudents.map((s) => {
+                      const presentSet = new Set(attendance[currentWeek] || []);
+                      const isPresent = presentSet.has(s.number);
+                      return (
+                        <tr key={s.id} className="hover:bg-gray-50 transition">
+                          <td className="px-4 py-4 font-medium text-gray-800 text-sm">{s.name}</td>
+                          <td className="px-4 py-4 text-gray-600 text-sm">{s.number}</td>
+                          <td className="px-4 py-4 text-center"><span className="text-xl sm:text-2xl font-bold text-blue-600">{s.present}</span> <span className="text-gray-500 text-sm">/ {s.totalWeeks || 0}</span></td>
+                          <td className="px-4 py-4 text-center"><span className={`px-3 py-1 rounded-full font-bold text-xs sm:text-sm border-2 ${getStatusColor(s.absences)}`}>{getStatusText(s.absences)}</span></td>
+                          <td className="px-4 py-4 text-center">{isPresent ? (<span className="inline-flex items-center gap-1 text-green-700 font-semibold text-sm"><CheckCircle size={16} /> VAR</span>) : (<span className="text-gray-400 text-sm">YOK</span>)}</td>
+                          <td className="px-4 py-4 text-center"><button onClick={() => { if (window.confirm('Bu öğrenciyi silmek istediğinizden emin misiniz?')) setStudents(students.filter(x => x.id !== s.id)); }} className="text-red-600 hover:text-red-800" title="Sil"><X size={18} /></button></td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-2xl shadow-xl p-6">
+              <div className="flex flex-wrap items-center justify-center gap-4">
+                <button onClick={() => setCurrentWeek(Math.max(1, currentWeek - 1))} disabled={currentWeek === 1} className="bg-gray-200 text-gray-700 px-6 py-3 rounded-xl font-semibold hover:bg-gray-300 transition disabled:opacity-50 disabled:cursor-not-allowed">← Önceki</button>
+                <div className="text-xl font-bold text-gray-800">Hafta {currentWeek}</div>
+                <button onClick={() => setCurrentWeek(Math.min(14, currentWeek + 1))} disabled={currentWeek === 14} className="bg-blue-600 text-white px-6 py-3 rounded-xl font-semibold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">Sonraki →</button>
+                <button onClick={downloadCSV} className="bg-white border-2 border-blue-600 text-blue-700 px-6 py-3 rounded-xl font-semibold hover:bg-blue-50 transition flex items-center gap-2"><Download size={18} /> CSV İndir</button>
+              </div>
+            </div>
+
+            {uiError && (
+              <div className="bg-red-50 text-red-800 border border-red-300 rounded-xl p-4">
+                <b>Hata:</b> {uiError}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* QR Sekmesi */}
+        {activeTab === 'qr' && (
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-6 text-center">📷 QR Kod Oluştur</h2>
+            <div className="max-w-2xl mx-auto">
+              <div className="bg-gradient-to-br from-blue-50 to-purple-50 rounded-2xl p-8 mb-6">
+                <div className="text-center mb-6">
+                  <div className="text-6xl font-bold text-blue-600 mb-2">Hafta {currentWeek}</div>
+                  <div className="text-gray-600">Tek tıkla benzersiz QR kodu üret</div>
+                </div>
+                {!session?.active ? (
+                  <button onClick={generateQR} className="w-full bg-blue-600 text-white py-4 rounded-xl text-xl font-bold hover:bg-blue-700 transition shadow-lg"><QrCode className="inline mr-3" size={28} /> QR Kod Üret</button>
+                ) : (
+                  <button onClick={deactivateSession} className="w-full bg-red-600 text-white py-4 rounded-xl text-xl font-bold hover:bg-red-700 transition shadow-lg">Oturumu Kapat</button>
+                )}
+              </div>
+
+              {session?.active && qrCode && (
+                <div className="bg-white border-4 border-blue-600 rounded-2xl p-8 text-center">
+                  <div className="inline-block bg-white p-6 rounded-2xl shadow-xl mb-4">
+                    <QRCodeCanvas value={checkinURL} size={240} includeMargin />
+                  </div>
+                  <div className="mb-4">
+                    <div className="text-sm text-gray-600 mb-2">Oturum Kodu:</div>
+                    <div className="text-3xl font-mono font-bold text-blue-600 break-all">{qrCode}</div>
+                  </div>
+                  <div className="mb-2 text-sm text-gray-600 break-all">{checkinURL}</div>
+                  <div className="mt-4 flex flex-wrap gap-2 justify-center">
+                    <button onClick={() => { window.location.hash = `#/checkin?week=${encodeURIComponent(String(currentWeek))}&code=${encodeURIComponent(qrCode)}`; }} className="px-4 py-2 rounded-lg bg-blue-600 text-white font-semibold hover:bg-blue-700">Linki Aç (Aynı Sekme)</button>
+                    <button onClick={() => { try { window.open(checkinURL, '_blank', 'noopener'); } catch { } }} className="px-4 py-2 rounded-lg bg-white border-2 border-blue-600 text-blue-700 font-semibold hover:bg-blue-50">Yeni Sekmede Aç</button>
+                    <button onClick={() => navigator.clipboard?.writeText(checkinURL)} className="px-4 py-2 rounded-lg border-2 border-blue-600 text-blue-700 font-semibold hover:bg-blue-50">Linki Kopyala</button>
+                  </div>
+
+                  {BACKEND.mode === 'LOCAL' && (
+                    <div className="mt-6 p-4 bg-yellow-50 border-2 border-yellow-300 rounded-xl text-left text-sm">
+                      <AlertCircle className="inline text-yellow-600 mr-2" size={20} />
+                      <b>Not:</b> LOCAL modda veriler bu cihazdadır. Öğrencilerin başka cihazdan doldurması için sayfayı herkese açık bir domaine (Vercel/Netlify) deploy edin <u>veya</u> BACKEND.mode='APPS_SCRIPT' yapıp URL girin.
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Kılavuz */}
+        {activeTab === 'guide' && (
+          <div className="bg-white rounded-2xl shadow-xl p-8">
+            <h2 className="text-3xl font-bold text-gray-800 mb-8 text-center">📖 Kılavuz: Cihazlar Arası Çalıştırma</h2>
+            <div className="space-y-6 max-w-4xl mx-auto text-gray-700">
+              <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border-l-4 border-blue-600">
+                <h3 className="text-xl font-bold text-gray-800 mb-3">1) Vercel/Netlify ile Yayınla</h3>
+                <p>Projeyi herkese açık bir adrese deploy ederseniz, öğrencilerin telefonunda <code>{'{origin}'}</code> alan adıyla açılır ve QR çalışır. LOCAL modda dahi link açılır fakat kayıtlar bu sunucunun localStorage’ında kalır.</p>
+              </div>
+              <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-6 border-l-4 border-green-600">
+                <h3 className="text-xl font-bold text-gray-800 mb-3">2) (Önerilen) Google Apps Script ile Paylaşımlı Kayıt</h3>
+                <ol className="list-decimal list-inside space-y-2">
+                  <li>Google Drive → Yeni → Diğer → <b>Apps Script</b>.</li>
+                  <li>Aşağıdaki minimal kodu yapıştırın ve <b>Dağıt</b> → <b>Web uygulaması</b> yapın, URL’yi alın:</li>
+                </ol>
+                <pre className="overflow-auto text-xs bg-gray-100 p-3 rounded">{`function doGet(e){const a=PropertiesService.getScriptProperties();const week=e.parameter.week;const action=e.parameter.action;const sheet=spread();if(action=='getSession'){const r=getRow(sheet,'sessions',week);return ContentService.createTextOutput(r?JSON.stringify(r):'null').setMimeType(ContentService.MimeType.JSON);}if(action=='getAttendance'){return ContentService.createTextOutput(JSON.stringify(getAll(sheet,'attendance'))).setMimeType(ContentService.MimeType.JSON);}return ContentService.createTextOutput('ok');}
+function doPost(e){const body=JSON.parse(e.postData.contents);const sheet=spread();if(body.action=='saveSession'){put(sheet,'sessions',body.week,body.session);return json({ok:true});}if(body.action=='recordCheckin'){const s=get(sheet,'sessions',body.week);if(!s||!s.active||String(s.code).trim()!=String(body.code).trim())return json({ok:false,error:'Oturum aktif değil veya kod geçersiz.'});const att=get(sheet,'attendance',body.week)||[];if(att.includes(body.number))return json({ok:false,error:'Bu numara zaten yoklamaya katıldı.'});att.push(body.number);put(sheet,'attendance',body.week,att);return json({ok:true});}return json({ok:false});}
+function spread(){try{const ss=SpreadsheetApp.openById('YOUR_SHEET_ID_HERE');return ss.getSheetByName('data')||ss.insertSheet('data');}catch(e){throw new Error('SHEET_ID geçersiz veya erişim izni yok.');}}
+function json(o){return ContentService.createTextOutput(JSON.stringify(o)).setMimeType(ContentService.MimeType.JSON)}
+function getRow(sh,ns,key){const r=sh.getDataRange().getValues();for(let i=0;i<r.length;i++){if(String(r[i][0])==String(ns)&&String(r[i][1])==String(key))try{return JSON.parse(r[i][2])}catch(e){return r[i][2]}}return null}
+function put(sh,ns,key,val){const r=sh.getDataRange().getValues();const strVal=JSON.stringify(val);for(let i=0;i<r.length;i++){if(String(r[i][0])==String(ns)&&String(r[i][1])==String(key)){sh.getRange(i+1,3).setValue(strVal);return}}sh.appendRow([ns,key,strVal])}
+function get(sh,ns,key){return getRow(sh,ns,key)}
+function getAll(sh,ns){const r=sh.getDataRange().getValues();const out={};for(let i=0;i<r.length;i++){if(r[i][0]==ns){try{const arr=JSON.parse(r[i][2]);out[r[i][1]]=arr}catch(e){}}}return out}`}</pre>
+                <p className="mt-2">Kodda <b>YOUR_SHEET_ID_HERE</b> kısmını kendi Google Sheet ID’nizle değiştirin. Sonra bu dosyada BACKEND.mode='APPS_SCRIPT' ve APPS_SCRIPT_URL'i o URL ile doldurun.</p>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function CheckinPage({ qs }) {
+  const week = qs.get('week');
+  const code = qs.get('code');
+  const [number, setNumber] = useState('');
+  const [status, setStatus] = useState('idle'); // idle, checking, ok, err
+  const [message, setMessage] = useState('');
+
+  const submit = async (e) => {
+    e.preventDefault();
+    try {
+      setStatus('checking'); setMessage('');
+      if (!week || !code) throw new Error('Geçersiz bağlantı.');
+      if (!/^\d{11,}$/.test(number)) throw new Error('Geçerli bir öğrenci numarası girin.');
+      await api.recordCheckin(week, number, code);
+      setStatus('ok'); setMessage('✅ Yoklamanız alındı. Teşekkürler.'); setNumber('');
+    } catch (e) {
+      setStatus('err'); setMessage(e.message || String(e));
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-green-500 via-emerald-500 to-teal-500 p-6 flex items-center justify-center">
+      <div className="w-full max-w-md">
+        <button onClick={() => (window.location.hash = '#/dashboard')} className="mb-4 flex items-center gap-2 text-white hover:text-gray-100 transition"><ArrowLeft size={20} /> Ana Sayfaya Dön</button>
+        <div className="bg-white rounded-2xl shadow-2xl p-8">
+          <div className="text-center mb-6">
+            <div className="text-6xl mb-2">📲</div>
+            <h1 className="text-3xl font-bold text-gray-800 mb-2">Yoklama Check-in</h1>
+            <p className="text-gray-600">Hafta {week}</p>
+          </div>
+          <div className="mb-6 p-4 rounded-xl bg-blue-50 border-2 border-blue-200">
+            <div className="text-sm text-gray-700 mb-1">Oturum Kodu:</div>
+            <div className="font-mono text-2xl text-blue-700 font-bold break-all">{code}</div>
+          </div>
+          <form onSubmit={submit}>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Öğrenci Numaranızı Girin</label>
+            <input type="tel" inputMode="numeric" placeholder="örn. 21070008017" value={number} onChange={(e) => setNumber(e.target.value.replace(/[^0-9]/g, ''))} className="w-full px-4 py-4 border-2 border-gray-300 rounded-xl text-lg focus:border-blue-500 focus:outline-none mb-4" disabled={status === 'checking'} />
+            <button type="submit" disabled={status === 'checking' || !number} className="w-full bg-blue-600 text-white py-4 rounded-xl text-lg font-bold hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed">{status === 'checking' ? '⏳ Kontrol ediliyor…' : '✓ Yoklamayı Onayla'}</button>
+          </form>
+          {message && (<div className={`mt-6 p-4 rounded-xl text-sm font-medium ${status === 'ok' ? 'bg-green-50 text-green-800 border-2 border-green-300' : 'bg-red-50 text-red-800 border-2 border-red-300'}`}>{message}</div>)}
+          <div className="mt-6 p-4 bg-gray-50 rounded-xl"><p className="text-xs text-gray-600 text-center">⚠️ Sadece kendi öğrenci numaranızı girin. Başkası adına yoklama almak yasaktır.</p></div>
+        </div>
+      </div>
+    </div>
+  );
+}
