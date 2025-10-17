@@ -6,109 +6,230 @@
     <title>Akıllı Yoklama Sistemi</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
         
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { 
-            font-family: 'Outfit', sans-serif; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Poppins', sans-serif; 
+            background: #0a0e27;
             min-height: 100vh;
             position: relative;
             overflow-x: hidden;
         }
         
-        /* Animated Background Blobs */
-        .blob {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-            opacity: 0.4;
-            animation: float 20s infinite ease-in-out;
+        /* Animated Background */
+        .stars {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
         }
-        .blob-1 { background: #ff6b6b; width: 400px; height: 400px; top: -100px; left: -100px; animation-delay: 0s; }
-        .blob-2 { background: #4ecdc4; width: 350px; height: 350px; bottom: -100px; right: -100px; animation-delay: -5s; }
-        .blob-3 { background: #ffe66d; width: 300px; height: 300px; top: 50%; left: 50%; transform: translate(-50%, -50%); animation-delay: -10s; }
+        
+        .star {
+            position: absolute;
+            background: white;
+            border-radius: 50%;
+            animation: twinkle 3s infinite;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        
+        /* Gradient Orbs */
+        .orb {
+            position: fixed;
+            border-radius: 50%;
+            filter: blur(120px);
+            opacity: 0.3;
+            animation: float 25s infinite ease-in-out;
+        }
+        
+        .orb-1 {
+            width: 600px;
+            height: 600px;
+            background: radial-gradient(circle, #667eea 0%, transparent 70%);
+            top: -200px;
+            left: -200px;
+            animation-delay: 0s;
+        }
+        
+        .orb-2 {
+            width: 500px;
+            height: 500px;
+            background: radial-gradient(circle, #f093fb 0%, transparent 70%);
+            bottom: -150px;
+            right: -150px;
+            animation-delay: -8s;
+        }
+        
+        .orb-3 {
+            width: 550px;
+            height: 550px;
+            background: radial-gradient(circle, #4facfe 0%, transparent 70%);
+            top: 50%;
+            left: 50%;
+            animation-delay: -15s;
+        }
         
         @keyframes float {
             0%, 100% { transform: translate(0, 0) scale(1); }
-            33% { transform: translate(50px, -80px) scale(1.1); }
-            66% { transform: translate(-50px, 80px) scale(0.9); }
+            33% { transform: translate(100px, -100px) scale(1.1); }
+            66% { transform: translate(-100px, 100px) scale(0.9); }
         }
         
-        /* Glass Card Effect */
-        .glass-card {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(20px);
-            border: 1px solid rgba(255, 255, 255, 0.3);
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-        }
-        
-        .glass-dark {
-            background: rgba(30, 30, 50, 0.85);
+        /* Card Styles */
+        .neo-card {
+            background: rgba(255, 255, 255, 0.05);
             backdrop-filter: blur(20px);
             border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 
+                0 8px 32px 0 rgba(31, 38, 135, 0.37),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            transition: all 0.4s cubic-bezier(0.165, 0.84, 0.44, 1);
         }
         
-        /* Fade In Animation */
-        @keyframes fadeInUp {
-            from { opacity: 0; transform: translateY(30px); }
-            to { opacity: 1; transform: translateY(0); }
+        .neo-card:hover {
+            transform: translateY(-10px);
+            box-shadow: 
+                0 20px 60px 0 rgba(31, 38, 135, 0.5),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.1);
         }
-        .fade-in { animation: fadeInUp 0.6s ease-out forwards; }
-        .delay-1 { animation-delay: 0.1s; opacity: 0; }
-        .delay-2 { animation-delay: 0.2s; opacity: 0; }
-        .delay-3 { animation-delay: 0.3s; opacity: 0; }
         
         /* Gradient Text */
         .gradient-text {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
+            animation: gradient-shift 3s ease infinite;
+            background-size: 200% 200%;
         }
         
-        /* Hover Effects */
-        .hover-lift { transition: all 0.3s ease; }
-        .hover-lift:hover { transform: translateY(-5px); box-shadow: 0 30px 60px -15px rgba(0, 0, 0, 0.3); }
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
         
         /* Button Styles */
-        .btn-gradient {
+        .btn-glow {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.5);
             transition: all 0.3s ease;
-        }
-        .btn-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px -5px rgba(102, 126, 234, 0.5);
+            position: relative;
+            overflow: hidden;
         }
         
-        /* Pulse Animation for Active Status */
-        @keyframes pulse-ring {
-            0% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.7); }
-            70% { box-shadow: 0 0 0 10px rgba(34, 197, 94, 0); }
-            100% { box-shadow: 0 0 0 0 rgba(34, 197, 94, 0); }
+        .btn-glow::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.3), transparent);
+            transition: left 0.5s;
         }
-        .pulse-active { animation: pulse-ring 2s infinite; }
         
-        /* Scrollbar */
-        ::-webkit-scrollbar { width: 10px; }
-        ::-webkit-scrollbar-track { background: rgba(255, 255, 255, 0.1); }
-        ::-webkit-scrollbar-thumb { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 10px; }
+        .btn-glow:hover::before {
+            left: 100%;
+        }
+        
+        .btn-glow:hover {
+            box-shadow: 0 0 50px rgba(102, 126, 234, 0.8);
+            transform: translateY(-3px);
+        }
         
         /* QR Code Container */
-        #qrcode { display: inline-block; padding: 20px; background: white; border-radius: 16px; box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.2); }
-        #qrcode canvas, #qrcode img { display: block !important; }
+        .qr-container {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 4px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(102, 126, 234, 0.4);
+        }
+        
+        .qr-inner {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+        }
+        
+        /* Fade Animations */
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(40px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .fade-in { animation: fadeInUp 0.8s ease-out forwards; }
+        .delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .delay-3 { animation-delay: 0.3s; opacity: 0; }
+        .delay-4 { animation-delay: 0.4s; opacity: 0; }
+        
+        /* Pulse Effect */
+        @keyframes pulse-glow {
+            0%, 100% { box-shadow: 0 0 20px rgba(34, 197, 94, 0.5); }
+            50% { box-shadow: 0 0 40px rgba(34, 197, 94, 0.8); }
+        }
+        
+        .pulse-glow { animation: pulse-glow 2s infinite; }
+        
+        /* Login Page Styles */
+        .login-card {
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(30px);
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+        }
+        
+        .input-glow {
+            background: rgba(255, 255, 255, 0.05);
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            transition: all 0.3s ease;
+        }
+        
+        .input-glow:focus {
+            background: rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(102, 126, 234, 0.5);
+            box-shadow: 0 0 30px rgba(102, 126, 234, 0.3);
+            outline: none;
+        }
+        
+        /* Status Badge */
+        .status-badge {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
     </style>
 </head>
 <body>
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-    <div class="blob blob-3"></div>
+    <!-- Background Elements -->
+    <div class="stars" id="stars"></div>
+    <div class="orb orb-1"></div>
+    <div class="orb orb-2"></div>
+    <div class="orb orb-3"></div>
     
-    <div id="app" style="position: relative; z-index: 1;"></div>
+    <div id="app" style="position: relative; z-index: 10;"></div>
 
     <script>
+        // Create stars
+        const starsContainer = document.getElementById('stars');
+        for (let i = 0; i < 100; i++) {
+            const star = document.createElement('div');
+            star.className = 'star';
+            star.style.width = Math.random() * 3 + 'px';
+            star.style.height = star.style.width;
+            star.style.left = Math.random() * 100 + '%';
+            star.style.top = Math.random() * 100 + '%';
+            star.style.animationDelay = Math.random() * 3 + 's';
+            starsContainer.appendChild(star);
+        }
+
         const state = {
             students: [
                 { id: 1, name: 'İBRAHİM GÜLTEKİN', number: '18070003013' },
@@ -157,8 +278,10 @@
             currentWeek: 1,
             attendance: {},
             session: null,
+            userType: null,
             checkinNumber: '',
-            checkinCode: ''
+            checkinCode: '',
+            teacherPassword: 'hoca123'
         };
 
         const generateCode = () => Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -190,6 +313,27 @@
                 danger: studentStats.filter(s => s.status === 'danger').length,
                 failed: studentStats.filter(s => s.status === 'failed').length
             };
+        };
+
+        const login = (type) => {
+            if (type === 'teacher') {
+                const password = prompt('🔐 Öğretmen Şifresi:');
+                if (password === state.teacherPassword) {
+                    state.userType = 'teacher';
+                    window.location.hash = '#/dashboard';
+                } else {
+                    alert('❌ Yanlış şifre!');
+                }
+            } else {
+                state.userType = 'student';
+                window.location.hash = '#/checkin';
+            }
+        };
+
+        const logout = () => {
+            state.userType = null;
+            state.session = null;
+            window.location.hash = '#/';
         };
 
         const startSession = () => {
@@ -238,10 +382,10 @@
             }
 
             state.attendance[state.currentWeek].push(num);
-            alert(`✅ ${student.name} yoklamaya kaydedildi!`);
+            alert(`✅ ${student.name}\n\nYoklamaya başarıyla kaydedildi!`);
             state.checkinNumber = '';
             state.checkinCode = '';
-            window.location.hash = '#/dashboard';
+            render();
         };
 
         const changeWeek = (delta) => {
@@ -251,7 +395,113 @@
 
         const copyUrl = () => {
             const url = `${window.location.origin}${window.location.pathname}#/checkin?w=${state.currentWeek}&c=${state.session.code}`;
-            navigator.clipboard.writeText(url).then(() => alert('✅ Link kopyalandı!'));
+            navigator.clipboard.writeText(url).then(() => alert('✅ Link panoya kopyalandı!'));
+        };
+
+        const renderLogin = () => {
+            return `
+                <div class="min-h-screen flex items-center justify-center p-6">
+                    <div class="max-w-5xl w-full">
+                        <!-- Header -->
+                        <div class="text-center mb-16 fade-in">
+                            <div class="inline-block mb-6">
+                                <div class="w-28 h-28 mx-auto bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl transform hover:scale-110 transition duration-300">
+                                    <i data-lucide="graduation-cap" class="w-16 h-16 text-white"></i>
+                                </div>
+                            </div>
+                            <h1 class="text-7xl font-black gradient-text mb-4">
+                                Akıllı Yoklama
+                            </h1>
+                            <p class="text-2xl text-gray-300 font-light">Modern Eğitim Yönetim Sistemi</p>
+                        </div>
+
+                        <!-- Login Cards -->
+                        <div class="grid md:grid-cols-2 gap-8">
+                            <!-- Teacher Card -->
+                            <div class="login-card rounded-3xl p-10 fade-in delay-1 transform hover:scale-105 transition duration-300">
+                                <div class="text-center mb-8">
+                                    <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-xl">
+                                        <i data-lucide="user-cog" class="w-10 h-10 text-white"></i>
+                                    </div>
+                                    <h2 class="text-3xl font-bold text-white mb-2">Öğretmen Girişi</h2>
+                                    <p class="text-gray-400">Yoklama yönetimi ve raporlama</p>
+                                </div>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                                        <div class="flex items-center gap-3 text-sm text-gray-300">
+                                            <i data-lucide="check-circle" class="w-5 h-5 text-green-400"></i>
+                                            <span>Oturum başlatma</span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                                        <div class="flex items-center gap-3 text-sm text-gray-300">
+                                            <i data-lucide="bar-chart-3" class="w-5 h-5 text-blue-400"></i>
+                                            <span>Detaylı raporlar</span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                                        <div class="flex items-center gap-3 text-sm text-gray-300">
+                                            <i data-lucide="users" class="w-5 h-5 text-purple-400"></i>
+                                            <span>Öğrenci yönetimi</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button onclick="login('teacher')" class="w-full mt-8 py-4 btn-glow rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-3">
+                                    <i data-lucide="lock" class="w-5 h-5"></i>
+                                    Öğretmen Girişi
+                                </button>
+                            </div>
+
+                            <!-- Student Card -->
+                            <div class="login-card rounded-3xl p-10 fade-in delay-2 transform hover:scale-105 transition duration-300">
+                                <div class="text-center mb-8">
+                                    <div class="w-20 h-20 mx-auto mb-6 bg-gradient-to-br from-pink-500 to-rose-600 rounded-2xl flex items-center justify-center shadow-xl">
+                                        <i data-lucide="user" class="w-10 h-10 text-white"></i>
+                                    </div>
+                                    <h2 class="text-3xl font-bold text-white mb-2">Öğrenci Girişi</h2>
+                                    <p class="text-gray-400">Hızlı yoklama kaydı</p>
+                                </div>
+                                
+                                <div class="space-y-4">
+                                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                                        <div class="flex items-center gap-3 text-sm text-gray-300">
+                                            <i data-lucide="qr-code" class="w-5 h-5 text-cyan-400"></i>
+                                            <span>QR kod tarama</span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                                        <div class="flex items-center gap-3 text-sm text-gray-300">
+                                            <i data-lucide="zap" class="w-5 h-5 text-yellow-400"></i>
+                                            <span>Hızlı kayıt</span>
+                                        </div>
+                                    </div>
+                                    <div class="bg-white/5 rounded-xl p-4 border border-white/10">
+                                        <div class="flex items-center gap-3 text-sm text-gray-300">
+                                            <i data-lucide="shield-check" class="w-5 h-5 text-green-400"></i>
+                                            <span>Güvenli sistem</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <button onclick="login('student')" class="w-full mt-8 py-4 bg-gradient-to-r from-pink-500 to-rose-600 hover:from-pink-600 hover:to-rose-700 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-3 shadow-xl transition transform hover:scale-105">
+                                    <i data-lucide="log-in" class="w-5 h-5"></i>
+                                    Öğrenci Girişi
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Footer Info -->
+                        <div class="text-center mt-12 fade-in delay-3">
+                            <p class="text-gray-400 text-sm">
+                                <i data-lucide="shield" class="w-4 h-4 inline mr-2"></i>
+                                Güvenli ve modern yoklama sistemi
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
         };
 
         const renderDashboard = () => {
@@ -259,220 +509,62 @@
             const url = state.session ? `${window.location.origin}${window.location.pathname}#/checkin?w=${state.currentWeek}&c=${state.session.code}` : '';
             
             return `
-                <div class="max-w-7xl mx-auto p-6 space-y-8">
-                    <!-- Header -->
-                    <div class="glass-card rounded-3xl p-8 fade-in hover-lift">
-                        <div class="flex flex-col md:flex-row justify-between items-center gap-6">
-                            <div class="text-center md:text-left">
-                                <h1 class="text-5xl md:text-6xl font-black gradient-text mb-2">
-                                    Akıllı Yoklama
-                                </h1>
-                                <p class="text-gray-600 text-lg font-medium">Hafta ${state.currentWeek} • ${stats.total} Öğrenci</p>
-                            </div>
-                            <div class="flex gap-3">
-                                <button onclick="changeWeek(-1)" class="w-14 h-14 btn-gradient rounded-2xl flex items-center justify-center text-white shadow-lg">
-                                    <i data-lucide="chevron-left" class="w-6 h-6"></i>
-                                </button>
-                                <button onclick="changeWeek(1)" class="w-14 h-14 btn-gradient rounded-2xl flex items-center justify-center text-white shadow-lg">
-                                    <i data-lucide="chevron-right" class="w-6 h-6"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Stats Grid -->
-                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                        <div class="glass-card rounded-3xl p-6 fade-in delay-1 hover-lift">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-500 rounded-2xl flex items-center justify-center">
-                                    <i data-lucide="check-circle" class="w-7 h-7 text-white"></i>
-                                </div>
-                                <span class="text-4xl font-black text-green-600">${stats.safe}</span>
-                            </div>
-                            <h3 class="text-gray-700 font-bold text-lg">Güvenli</h3>
-                            <p class="text-gray-500 text-sm">Devamsızlık sorunu yok</p>
-                        </div>
-
-                        <div class="glass-card rounded-3xl p-6 fade-in delay-2 hover-lift">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="w-14 h-14 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center">
-                                    <i data-lucide="alert-triangle" class="w-7 h-7 text-white"></i>
-                                </div>
-                                <span class="text-4xl font-black text-orange-600">${stats.warning}</span>
-                            </div>
-                            <h3 class="text-gray-700 font-bold text-lg">Dikkat</h3>
-                            <p class="text-gray-500 text-sm">2-3 devamsızlık</p>
-                        </div>
-
-                        <div class="glass-card rounded-3xl p-6 fade-in delay-3 hover-lift">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center">
-                                    <i data-lucide="alert-octagon" class="w-7 h-7 text-white"></i>
-                                </div>
-                                <span class="text-4xl font-black text-red-600">${stats.danger}</span>
-                            </div>
-                            <h3 class="text-gray-700 font-bold text-lg">Tehlikede</h3>
-                            <p class="text-gray-500 text-sm">4 devamsızlık</p>
-                        </div>
-
-                        <div class="glass-card rounded-3xl p-6 fade-in delay-3 hover-lift">
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="w-14 h-14 bg-gradient-to-br from-red-600 to-pink-600 rounded-2xl flex items-center justify-center">
-                                    <i data-lucide="x-circle" class="w-7 h-7 text-white"></i>
-                                </div>
-                                <span class="text-4xl font-black text-red-700">${stats.failed}</span>
-                            </div>
-                            <h3 class="text-gray-700 font-bold text-lg">Kaldı</h3>
-                            <p class="text-gray-500 text-sm">5+ devamsızlık</p>
-                        </div>
-                    </div>
-
-                    <!-- Session Control -->
-                    <div class="glass-card rounded-3xl p-8 fade-in hover-lift">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div class="w-12 h-12 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-2xl flex items-center justify-center">
-                                <i data-lucide="radio" class="w-6 h-6 text-white"></i>
-                            </div>
-                            <h2 class="text-3xl font-black text-gray-800">Yoklama Oturumu</h2>
-                        </div>
-                        
-                        ${state.session?.active ? `
-                            <div class="space-y-6">
-                                <div class="flex items-center gap-4 bg-green-50 border-2 border-green-200 rounded-2xl p-6">
-                                    <div class="w-4 h-4 bg-green-500 rounded-full pulse-active"></div>
+                <div class="min-h-screen p-6">
+                    <div class="max-w-7xl mx-auto space-y-8">
+                        <!-- Top Bar -->
+                        <div class="neo-card rounded-3xl p-6 fade-in">
+                            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                                <div class="flex items-center gap-4">
+                                    <div class="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center shadow-xl">
+                                        <i data-lucide="graduation-cap" class="w-8 h-8 text-white"></i>
+                                    </div>
                                     <div>
-                                        <p class="text-green-700 font-bold text-lg">Oturum Aktif</p>
-                                        <p class="text-green-600">Kod: <span class="text-3xl font-black">${state.session.code}</span></p>
+                                        <h1 class="text-4xl font-black gradient-text">Öğretmen Paneli</h1>
+                                        <p class="text-gray-400 font-medium">Hafta ${state.currentWeek}</p>
                                     </div>
                                 </div>
-                                
-                                <div class="flex flex-col items-center gap-6">
-                                    <div id="qrcode"></div>
-                                    <p class="text-gray-600 text-center max-w-md">Öğrenciler bu QR kodu tarayarak veya linki kullanarak yoklamaya katılabilir</p>
-                                </div>
-                                
-                                <div class="flex flex-wrap gap-4">
-                                    <button onclick="copyUrl()" class="flex-1 min-w-[200px] px-6 py-4 bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg transition transform hover:scale-105">
-                                        <i data-lucide="copy" class="w-5 h-5"></i>
-                                        Linki Kopyala
+                                <div class="flex items-center gap-3">
+                                    <button onclick="changeWeek(-1)" class="w-12 h-12 btn-glow rounded-xl flex items-center justify-center text-white">
+                                        <i data-lucide="chevron-left" class="w-6 h-6"></i>
                                     </button>
-                                    <button onclick="endSession()" class="flex-1 min-w-[200px] px-6 py-4 bg-gradient-to-r from-red-500 to-pink-500 hover:from-red-600 hover:to-pink-600 rounded-2xl text-white font-bold text-lg flex items-center justify-center gap-3 shadow-lg transition transform hover:scale-105">
-                                        <i data-lucide="stop-circle" class="w-5 h-5"></i>
-                                        Oturumu Bitir
+                                    <div class="px-6 py-3 bg-white/10 rounded-xl">
+                                        <span class="text-white font-bold text-xl">Hafta ${state.currentWeek}</span>
+                                    </div>
+                                    <button onclick="changeWeek(1)" class="w-12 h-12 btn-glow rounded-xl flex items-center justify-center text-white">
+                                        <i data-lucide="chevron-right" class="w-6 h-6"></i>
+                                    </button>
+                                    <button onclick="logout()" class="ml-4 px-6 py-3 bg-red-500/20 hover:bg-red-500/30 rounded-xl text-red-400 font-bold transition flex items-center gap-2">
+                                        <i data-lucide="log-out" class="w-5 h-5"></i>
+                                        Çıkış
                                     </button>
                                 </div>
                             </div>
-                        ` : `
-                            <button onclick="startSession()" class="w-full px-8 py-6 btn-gradient rounded-2xl text-white font-bold text-xl flex items-center justify-center gap-3 shadow-xl">
-                                <i data-lucide="play-circle" class="w-7 h-7"></i>
-                                Yeni Oturum Başlat
-                            </button>
-                        `}
-                    </div>
+                        </div>
 
-                    <!-- Students Table -->
-                    <div class="glass-card rounded-3xl overflow-hidden fade-in hover-lift">
-                        <div class="p-8 border-b border-gray-200">
-                            <div class="flex items-center gap-3">
-                                <div class="w-12 h-12 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center">
-                                    <i data-lucide="users" class="w-6 h-6 text-white"></i>
+                        <!-- Stats Cards -->
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <div class="neo-card rounded-3xl p-6 fade-in delay-1">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div class="w-14 h-14 bg-gradient-to-br from-green-400 to-emerald-600 rounded-2xl flex items-center justify-center shadow-xl">
+                                        <i data-lucide="check-circle" class="w-7 h-7 text-white"></i>
+                                    </div>
+                                    <span class="text-5xl font-black text-white">${stats.safe}</span>
                                 </div>
-                                <h2 class="text-3xl font-black text-gray-800">Öğrenci Listesi</h2>
-                            </div>
-                        </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full">
-                                <thead class="bg-gradient-to-r from-purple-50 to-indigo-50">
-                                    <tr>
-                                        <th class="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase">Öğrenci</th>
-                                        <th class="px-6 py-4 text-left text-sm font-bold text-gray-700 uppercase">Numara</th>
-                                        <th class="px-6 py-4 text-center text-sm font-bold text-gray-700 uppercase">Katılım</th>
-                                        <th class="px-6 py-4 text-center text-sm font-bold text-gray-700 uppercase">Devamsızlık</th>
-                                        <th class="px-6 py-4 text-center text-sm font-bold text-gray-700 uppercase">Durum</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-gray-100">
-                                    ${stats.students.map((s, i) => {
-                                        const statusConfig = {
-                                            safe: { color: 'from-green-400 to-emerald-500', text: 'Güvenli', bg: 'bg-green-50', textColor: 'text-green-700' },
-                                            warning: { color: 'from-yellow-400 to-orange-500', text: 'Dikkat', bg: 'bg-orange-50', textColor: 'text-orange-700' },
-                                            danger: { color: 'from-orange-500 to-red-500', text: 'Tehlike', bg: 'bg-red-50', textColor: 'text-red-700' },
-                                            failed: { color: 'from-red-600 to-pink-600', text: 'Kaldı', bg: 'bg-red-100', textColor: 'text-red-800' }
-                                        };
-                                        const config = statusConfig[s.status];
-                                        const initials = s.name.split(' ').map(n => n[0]).join('');
-                                        
-                                        return `
-                                            <tr class="hover:bg-purple-50 transition">
-                                                <td class="px-6 py-4">
-                                                    <div class="flex items-center gap-4">
-                                                        <div class="w-12 h-12 bg-gradient-to-br ${config.color} rounded-xl flex items-center justify-center text-white font-bold text-sm shadow-lg">
-                                                            ${initials}
-                                                        </div>
-                                                        <div class="font-semibold text-gray-800">${s.name}</div>
-                                                    </div>
-                                                </td>
-                                                <td class="px-6 py-4 text-gray-600 font-medium">${s.number}</td>
-                                                <td class="px-6 py-4 text-center">
-                                                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-bold text-blue-700 bg-blue-100">
-                                                        ${s.present}/${stats.maxWeek}
-                                                    </span>
-                                                </td>
-                                                <td class="px-6 py-4 text-center">
-                                                    <span class="text-lg font-bold text-gray-700">${s.absences}</span>
-                                                </td>
-                                                <td class="px-6 py-4 text-center">
-                                                    <span class="inline-flex items-center px-4 py-2 rounded-full text-sm font-bold ${config.bg} ${config.textColor}">
-                                                        ${config.text}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        `;
-                                    }).join('')}
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            `;
-        };
-
-        const renderCheckin = () => {
-            const params = new URLSearchParams(window.location.hash.split('?')[1]);
-            const week = params.get('w') || state.currentWeek;
-            
-            return `
-                <div class="min-h-screen flex items-center justify-center p-6">
-                    <div class="w-full max-w-md glass-card rounded-3xl p-10 fade-in shadow-2xl">
-                        <div class="text-center mb-8">
-                            <div class="w-24 h-24 mx-auto mb-6 bg-gradient-to-br from-purple-500 to-indigo-600 rounded-3xl flex items-center justify-center shadow-xl transform hover:scale-105 transition">
-                                <i data-lucide="user-check" class="w-12 h-12 text-white"></i>
-                            </div>
-                            <h1 class="text-4xl font-black gradient-text mb-2">
-                                Yoklama Girişi
-                            </h1>
-                            <p class="text-gray-600 text-lg font-medium">Hafta ${week}</p>
-                        </div>
-
-                        <div class="space-y-5">
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Öğrenci Numarası</label>
-                                <input 
-                                    type="text" 
-                                    id="studentNumber"
-                                    value="${state.checkinNumber}"
-                                    placeholder="Örn: 21070008016"
-                                    class="w-full px-5 py-4 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-purple-500 text-gray-800 font-medium transition"
-                                    oninput="state.checkinNumber = this.value"
-                                />
+                                <h3 class="text-green-400 font-bold text-xl mb-1">Güvenli</h3>
+                                <p class="text-gray-400 text-sm">Sorun yok</p>
                             </div>
 
-                            <div>
-                                <label class="block text-sm font-bold text-gray-700 mb-2">Yoklama Kodu</label>
-                                <input 
-                                    type="text" 
-                                    id="attendanceCode"
-                                    value="${state.checkinCode}"
-                                    placeholder="6 haneli kod"
-                                    class="w-full px-5 py-4 bg-white border-2 border-gray-200 rounded-2xl focus:outline-none focus:border-purple-500 text-gray-800 font-bold text-xl uppercase tracking-wider transition"
-                                    oninput="state.checkinCode = this
+                            <div class="neo-card rounded-3xl p-6 fade-in delay-2">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div class="w-14 h-14 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-xl">
+                                        <i data-lucide="alert-triangle" class="w-7 h-7 text-white"></i>
+                                    </div>
+                                    <span class="text-5xl font-black text-white">${stats.warning}</span>
+                                </div>
+                                <h3 class="text-orange-400 font-bold text-xl mb-1">Dikkat</h3>
+                                <p class="text-gray-400 text-sm">2-3 devamsızlık</p>
+                            </div>
+
+                            <div class="neo-card rounded-3xl p-6 fade-in delay-3">
+                                <div class="flex justify-between items-start mb-4">
+                                    <div class="w-14 h-14 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl
